@@ -620,16 +620,45 @@ class UseCases():
         insert = document.get_insert_node()
         selection = document.get_selection_node()
 
-        insert_prev = insert.prev_in_parent()
-        if insert_prev != None and insert_prev.type == 'char' and not NodeTypeDB.is_whitespace(insert_prev):
-            insert_new = insert_prev.word_bounds()[0]
+        def is_word_char(n):
+            return n.type in ['char', 'widget', 'placeholder'] and not NodeTypeDB.is_whitespace(n)
+
+        curr = insert.prev()
+
+        # 1. Skip non-word chars (whitespace, structure)
+        while curr is not None and not is_word_char(curr):
+            prev = curr.prev()
+            if prev == curr:
+                curr = None # boundary hit
+                break
+            curr = prev
+
+        # 2. Skip word chars
+        target = curr
+        while curr is not None and is_word_char(curr):
+            target = curr
+            prev = curr.prev()
+            if prev == curr:
+                # boundary
+                break
+            curr = prev
+
+        if target is None and curr is None:
+            # We hit the beginning of the document or paragraph boundary
+            # If we were traversing, we might have hit a boundary.
+            # Try to go to start of current structure if we are not there.
+            if insert.paragraph_start() != insert:
+                 insert_new = insert.paragraph_start()
+            else:
+                 # If we are already at paragraph start, try to go to previous node (e.g. across paragraphs)
+                 # But we might be at doc start.
+                 prev = insert.prev_no_descent()
+                 insert_new = prev if prev != insert else insert
         else:
-            insert_new = insert.prev_no_descent()
+            insert_new = target if target is not None else insert
 
         if do_selection:
             document.set_insert_and_selection_node(insert_new, selection)
-        elif document.has_selection():
-            document.set_insert_and_selection_node(document.get_first_selection_bound())
         else:
             document.set_insert_and_selection_node(insert_new)
         document.update_implicit_x_position()
@@ -668,15 +697,27 @@ class UseCases():
         insert = document.get_insert_node()
         selection = document.get_selection_node()
 
-        if insert != None and insert.type == 'char' and not NodeTypeDB.is_whitespace(insert):
-            insert_new = insert.word_bounds()[1]
-        else:
-            insert_new = insert.next_no_descent()
+        def is_word_char(n):
+            return n.type in ['char', 'widget', 'placeholder'] and not NodeTypeDB.is_whitespace(n)
+
+        curr = insert
+
+        # 1. Skip word chars
+        while curr is not None and is_word_char(curr):
+            next_n = curr.next()
+            if next_n == curr: break
+            curr = next_n
+
+        # 2. Skip non-word chars
+        while curr is not None and not is_word_char(curr):
+            next_n = curr.next()
+            if next_n == curr: break
+            curr = next_n
+
+        insert_new = curr
 
         if do_selection:
             document.set_insert_and_selection_node(insert_new, selection)
-        elif document.has_selection():
-            document.set_insert_and_selection_node(document.get_last_selection_bound())
         else:
             document.set_insert_and_selection_node(insert_new)
         document.update_implicit_x_position()
