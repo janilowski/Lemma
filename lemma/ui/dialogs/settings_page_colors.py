@@ -49,7 +49,7 @@ class PageColors(object):
         default_dark_theme = os.path.join(dirname, 'default-dark.css')
 
         self.add_theme_choice(default_theme, 0)
-        self.add_chooser('default', 'Automatic', 0, False)
+        self.add_chooser('default', 'Match system', 0, False)
 
         count = 1
 
@@ -176,9 +176,10 @@ class StylePreview(Gtk.Box):
 
     def draw(self, widget, ctx, width, height):
         color_prefix = 'theme_' + str(self.count) + '_'
-        color_bg_1 = ColorManager.get_ui_color(color_prefix + 'sidebar_bg_1')
-        color_bg_2 = ColorManager.get_ui_color(color_prefix + 'sidebar_active_bg')
-        color_fg_1 = ColorManager.get_ui_color(color_prefix + 'sidebar_fg_1')
+        color_bg_1 = ColorManager.get_ui_color(color_prefix + 'window_bg_color')
+        color_bg_2 = ColorManager.get_ui_color(color_prefix + 'view_active_color')
+        color_fg_1 = ColorManager.get_ui_color(color_prefix + 'window_fg_color')
+        color_title = ColorManager.get_ui_color(color_prefix + 'title_color')
 
         Gdk.cairo_set_source_rgba(ctx, color_bg_1)
         rounded_rectangle(ctx, 0, 0, width, height, 2)
@@ -188,9 +189,9 @@ class StylePreview(Gtk.Box):
         ctx.rectangle(0, height / 3, width, height / 3)
         ctx.fill()
 
-        Gdk.cairo_set_source_rgba(ctx, color_fg_1)
         for row, (w_short, w_long) in enumerate(self._line_widths):
             y0 = row * height / 3
+            Gdk.cairo_set_source_rgba(ctx, color_title if row == 1 else color_fg_1)
             ctx.rectangle(5, y0 + 8, w_short * width / 18, 2)
             ctx.rectangle(5, y0 + 18, w_long * width / 18, 2)
-        ctx.fill()
+            ctx.fill()
