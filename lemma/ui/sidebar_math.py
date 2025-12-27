@@ -18,19 +18,14 @@
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-gi.require_version('Rsvg', '2.0')
-from gi.repository import Gtk
 from gi.repository import Adw
-from gi.repository import Rsvg
+from gi.repository import Gtk
 
-import os.path
-
-from lemma.services.message_bus import MessageBus
 from lemma.repos.workspace_repo import WorkspaceRepo
-from lemma.services.paths import Paths
 from lemma.services.character_db import CharacterDB
-from lemma.use_cases.use_cases import UseCases
+from lemma.services.message_bus import MessageBus
 from lemma.services.settings import Settings
+from lemma.use_cases.use_cases import UseCases
 import lemma.services.timer as timer
 
 
@@ -416,11 +411,12 @@ class SidebarMath(object):
         wrapbox = Adw.WrapBox()
         wrapbox.set_line_spacing(0)
 
-        res_path = Paths.get_resources_folder()
         for data in symbols:
-            pic = Icon(os.path.join(res_path, 'icons_sidebar', 'sidebar-' + data[0] + '-symbolic.svg'))
+            icon_name = 'sidebar-' + data[0] + '-symbolic'
             button = Gtk.Button()
-            button.set_child(pic)
+            image = Gtk.Image.new_from_icon_name(icon_name)
+            image.set_pixel_size(18)
+            button.set_child(image)
             button.set_can_focus(False)
             button.add_css_class('flat')
             button.connect('clicked', self.on_button_clicked, data[1])
@@ -434,20 +430,3 @@ class SidebarMath(object):
 
         UseCases.insert_xml(xml)
         UseCases.scroll_insert_on_screen(animation_type='default')
-
-
-class Icon(Gtk.DrawingArea):
-
-    def __init__(self, path):
-        Gtk.DrawingArea.__init__(self)
-
-        self.rsvg_handle = Rsvg.Handle.new_from_file(path)
-        self.size = self.rsvg_handle.get_intrinsic_size_in_pixels()
-
-        self.set_size_request(self.size[1], self.size[2])
-        self.set_draw_func(self.draw)
-
-    def draw(self, widget, ctx, width, height):
-        self.rsvg_handle.render_cairo(ctx)
-
-

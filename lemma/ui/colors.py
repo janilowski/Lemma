@@ -17,6 +17,10 @@
 
 import os.path
 
+import gi
+gi.require_version('Adw', '1')
+from gi.repository import Adw
+
 from lemma.services.color_manager import ColorManager
 from lemma.services.message_bus import MessageBus
 from lemma.services.paths import Paths
@@ -30,6 +34,11 @@ class Colors(object):
         self.main_window = main_window
 
         self.color_scheme = None
+        self.dark_mode = None
+        self.style_manager = Adw.StyleManager.get_default()
+        if self.style_manager is not None:
+            self.style_manager.connect('notify::dark', self.on_style_manager_changed)
+            self.style_manager.connect('notify::color-scheme', self.on_style_manager_changed)
 
         MessageBus.subscribe(self, 'settings_changed')
 
@@ -44,11 +53,15 @@ class Colors(object):
     @timer.timer
     def update(self):
         color_scheme = Settings.get_value('color_scheme')
-        if color_scheme == self.color_scheme: return
+        dark_mode = self.style_manager.get_dark() if self.style_manager is not None else False
+
+        if color_scheme == self.color_scheme and dark_mode == self.dark_mode: return
 
         self.color_scheme = Settings.get_value('color_scheme')
+        self.dark_mode = dark_mode
         if self.color_scheme == 'default':
-            path = os.path.join(Paths.get_resources_folder(), 'themes', 'default.css')
+            theme_name = 'default-dark.css' if self.dark_mode else 'default.css'
+            path = os.path.join(Paths.get_resources_folder(), 'themes', theme_name)
         else:
             path = Settings.get_value('color_scheme')
 
@@ -59,4 +72,6 @@ class Colors(object):
 
         ColorManager.invalidate_cache()
 
+    def on_style_manager_changed(self, *args):
+        self.update()
 

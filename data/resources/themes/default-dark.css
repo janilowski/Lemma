@@ -1,0 +1,146 @@
+/* The main accent color and the matching text value */
+@define-color accent_bg_color #3584e4;
+@define-color accent_fg_color white;
+@define-color accent_color #1c71d8;
+
+/* destructive-action buttons */
+@define-color destructive_bg_color #e01b24;
+@define-color destructive_fg_color white;
+@define-color destructive_color #c01c28;
+
+/* Levelbars, entries, labels and infobars. These don't need text colors */
+@define-color success_bg_color #2ec27e;
+@define-color success_fg_color white;
+@define-color success_color #1b8553;
+
+@define-color warning_bg_color #e5a50a;
+@define-color warning_fg_color rgba(0, 0, 0, 0.8);
+@define-color warning_color #9c6e03;
+
+@define-color error_bg_color #e01b24;
+@define-color error_fg_color white;
+@define-color error_color #c01c28;
+
+/* Window */
+@define-color window_bg_color #1f1f1f;
+@define-color window_fg_color rgba(255, 255, 255, 0.9);
+
+/* Views - e.g. text view or tree view */
+@define-color view_bg_color #1f1f1f;
+@define-color view_fg_color #f2f2f2;
+@define-color view_hover_color rgba(255, 255, 255, 0.07);
+@define-color view_active_color rgba(255, 255, 255, 0.14);
+
+/* Dialogs */
+@define-color dialog_bg_color #242424;
+@define-color dialog_fg_color rgba(255, 255, 255, 0.9);
+@define-color dialog_border #3a3a3a;
+@define-color dialog_list_bg #242424;
+@define-color dialog_list_border #3a3a3a;
+
+/* Settings Dialog */
+
+@define-color storage_color_lemma #28af08;
+@define-color storage_color_system #f2e57b;
+@define-color storage_color_free #ccc;
+
+/* Shortcuts Dialog */
+
+@define-color keycap_fg rgba(255, 255, 255, 0.9);
+@define-color keycap_bg #555;
+
+/* Popovers */
+@define-color popover_bg_color #242424;
+@define-color popover_fg_color rgba(255, 255, 255, 0.9);
+@define-color popover_arrow_color #000000;
+@define-color popover_shade_color rgba(0, 0, 0, 0.35);
+@define-color popover_shadow_1 mix(black, transparent, .91);
+@define-color popover_shadow_2 mix(black, transparent, .95);
+@define-color menu_shortcut_color #bbbbbb;
+
+/* Thumbnails */
+@define-color thumbnail_bg_color #1f1f1f;
+@define-color thumbnail_fg_color rgba(255, 255, 255, 0.9);
+
+/* Headerbar */
+@define-color headerbar_bg_1 #333;
+@define-color headerbar_fg_1 #fff;
+@define-color headerbar_bg_2 #242424;
+@define-color header_border_bottom_1 #000;
+@define-color header_border_bottom_2 #00000066;
+
+/* Sidebar */
+@define-color sidebar_bg_1 #333;
+@define-color sidebar_fg_1 #fffd;
+@define-color sidebar_fg_2 #fff7;
+@define-color sidebar_fg_3 #fffc;
+@define-color sidebar_fg_4 #929292;
+@define-color sidebar_active_fg #fffc;
+@define-color sidebar_active_bg #222;
+@define-color sidebar_hover #3a3a3a;
+@define-color sidebar_selection #414141;
+
+/* Paneds */
+@define-color headerpaned_border_1 #444;
+@define-color headerpaned_border_2 #444;
+@define-color headerpaned_bg #444;
+@define-color bodypaned_border_1 #444;
+@define-color bodypaned_border_2 #444;
+@define-color bodypaned_bg #444;
+
+/* Borders */
+@define-color borders #444;
+@define-color border_1 #ffffff30;
+
+/* History */
+@define-color history_fg #f2f2f2;
+@define-color history_hover #ffffff11;
+@define-color history_active_bg #ffffff22;
+
+/* Document View */
+@define-color title_color #f4f4f4;
+@define-color text #f2f2f2;
+@define-color links #81a2ff;
+@define-color links_page_not_existing #ff8a80;
+@define-color selection_fg #fff;
+@define-color selection_bg #2f65ca;
+@define-color cursor #ffffff;
+@define-color highlights #8ae234;
+@define-color drop_color @text;
+@define-color bullets @text;
+
+/* Checkboxes */
+@define-color checkbox_unchecked_outline @borders;
+@define-color checkbox_unchecked_inner @view_bg_color;
+@define-color checkbox_checked_outline #5aa90d;
+@define-color checkbox_checked_inner @view_bg_color;
+
+/* Scrollbars */
+@define-color scrollbar_bg #2a2a2a;
+@define-color scrollbar_default #666;
+@define-color scrollbar_hover #888;
+@define-color scrollbar_active #aaa;
+@define-color scrollbar_thin #444;
+
+/* Toolbar */
+@define-color toolbar_fg #f2f2f2;
+
+/* Welcome Page */
+@define-color welcome_fg #ddd;
+@define-color welcome_bg @window_bg_color;
+@define-color welcome_logo #777;
+@define-color welcome_logo_node #b3a6ba;
+
+/* Link Dialog */
+@define-color link_ac_bg #2a2a2a;
+@define-color link_ac_border #555;
+@define-color link_entry_bg #1f1f1f;
+@define-color link_entry_border #444;
+
+/* Widgets */
+@define-color shade_color rgba(0, 0, 0, 0.2);
+@define-color description_color #bbb;
+@define-color list_bg #1f1f1f;
+@define-color list_row_border #333;
+@define-color list_row_hover #2a2a2a;
+@define-color scrollbar_outline_color #1f1f1f;
