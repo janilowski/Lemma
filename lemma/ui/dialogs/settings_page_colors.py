@@ -6,12 +6,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
@@ -45,15 +45,30 @@ class PageColors(object):
         self.style_previews = dict()
         dirname = os.path.join(Paths.get_resources_folder(), 'themes')
 
-        self.add_theme_choice(os.path.join(dirname, 'default.css'), 0)
-        self.add_chooser('default', 'default', 0, False)
+        # Default themes
+        default_theme = os.path.join(dirname, 'default.css')
+        default_dark_theme = os.path.join(dirname, 'default-dark.css')
+
+        self.add_theme_choice(default_theme, 0)
+        self.add_chooser('default', 'Automatic', 0, False)
 
         count = 1
-        for name in [file[:-4] for file in os.listdir(dirname) if file != 'default.css']:
+
+        self.add_theme_choice(default_theme, count)
+        self.add_chooser(default_theme, 'Light', count, True)
+        count += 1
+
+        self.add_theme_choice(default_dark_theme, count)
+        self.add_chooser(default_dark_theme, 'Dark', count, True)
+        count += 1
+
+        # Other built-in themes
+        for name in [file[:-4] for file in os.listdir(dirname) if file not in ['default.css', 'default-dark.css']]:
             self.add_theme_choice(os.path.join(dirname, name + '.css'), count)
             self.add_chooser(os.path.join(dirname, name + '.css'), name, count, True)
             count += 1
 
+        # User-generated themes
         for name in [file[:-4] for file in os.listdir(Paths.get_user_themes_folder())]:
             self.add_theme_choice(os.path.join(Paths.get_user_themes_folder(), name + '.css'), count)
             self.add_chooser(os.path.join(Paths.get_user_themes_folder(), name + '.css'), name, count, True)
@@ -176,5 +191,3 @@ class StylePreview(Gtk.Box):
         ctx.rectangle(5, 2 * height / 3 + 8, randrange(2, 5) * width / 18, 2)
         ctx.rectangle(5, 2 * height / 3 + 18, randrange(5, 15) * width / 18, 2)
         ctx.fill()
-
-
