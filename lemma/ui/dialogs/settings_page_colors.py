@@ -20,7 +20,6 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Gdk
 
 import os, os.path
-import xml.etree.ElementTree as ET
 from random import randrange
 
 from lemma.services.paths import Paths
@@ -157,6 +156,12 @@ class StylePreview(Gtk.Box):
         self.name = name
         self.count = count
 
+        self._line_widths = [
+            (randrange(2, 5), randrange(5, 15)),
+            (randrange(2, 5), randrange(5, 15)),
+            (randrange(2, 5), randrange(5, 15)),
+        ]
+
         self.drawing_area = Gtk.DrawingArea()
         self.drawing_area.set_size_request(-1, 84)
         self.drawing_area.set_draw_func(self.draw)
@@ -184,10 +189,8 @@ class StylePreview(Gtk.Box):
         ctx.fill()
 
         Gdk.cairo_set_source_rgba(ctx, color_fg_1)
-        ctx.rectangle(5, 0 * height / 3 + 8, randrange(2, 5) * width / 18, 2)
-        ctx.rectangle(5, 0 * height / 3 + 18, randrange(5, 15) * width / 18, 2)
-        ctx.rectangle(5, 1 * height / 3 + 8, randrange(2, 5) * width / 18, 2)
-        ctx.rectangle(5, 1 * height / 3 + 18, randrange(5, 15) * width / 18, 2)
-        ctx.rectangle(5, 2 * height / 3 + 8, randrange(2, 5) * width / 18, 2)
-        ctx.rectangle(5, 2 * height / 3 + 18, randrange(5, 15) * width / 18, 2)
+        for row, (w_short, w_long) in enumerate(self._line_widths):
+            y0 = row * height / 3
+            ctx.rectangle(5, y0 + 8, w_short * width / 18, 2)
+            ctx.rectangle(5, y0 + 18, w_long * width / 18, 2)
         ctx.fill()
