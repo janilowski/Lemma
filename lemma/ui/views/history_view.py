@@ -22,10 +22,10 @@ from gi.repository import Gtk, Pango
 from lemma.ui.views.scrolling_widget import ScrollingWidget
 
 
-class HistoryView(Gtk.Overlay):
+class HistoryView(Gtk.WindowHandle):
 
     def __init__(self):
-        Gtk.Overlay.__init__(self)
+        Gtk.WindowHandle.__init__(self)
         self.set_hexpand(True)
         self.add_css_class('history')
 
@@ -35,5 +35,4 @@ class HistoryView(Gtk.Overlay):
 
         self.content = self.scrolling_widget.content
         self.set_child(self.scrolling_widget.view)
-
 

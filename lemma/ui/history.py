@@ -17,7 +17,9 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gdk, Pango, PangoCairo
+from gi.repository import Gdk, GObject, Gtk, Pango, PangoCairo
+
+import time
 
 from lemma.services.message_bus import MessageBus
 from lemma.services.color_manager import ColorManager
@@ -44,12 +46,30 @@ class History(object):
         self.items = list()
         self.active_document_index = None
         self.selected_index = None
+        self.dragging_document_id = None
+        self.drag_history_override = None
+        self.drag_start_x = None
+        self.drag_target_index = None
+        self.dragging_offset_override = None
+        self.animated_offsets = dict()
+        self.target_offsets = dict()
+        self.history_items_data = list()
+        self.history_widths = dict()
+        self.total_width = 0
+        self.animation_timeout_id = None
+        self.hover_lock_until = None
 
         self.size_cache = dict()
 
         self.view.content.set_draw_func(self.draw)
         self.view.scrolling_widget.connect('primary_button_press', self.on_primary_button_press)
         self.view.scrolling_widget.connect('primary_button_release', self.on_primary_button_release)
+        self.drag_controller = Gtk.GestureDrag()
+        self.drag_controller.set_button(1)
+        self.drag_controller.connect('drag-begin', self.on_drag_begin)
+        self.drag_controller.connect('drag-update', self.on_drag_update)
+        self.drag_controller.connect('drag-end', self.on_drag_end)
+        self.view.content.add_controller(self.drag_controller)
 
         MessageBus.subscribe(self, 'history_changed')
         MessageBus.subscribe(self, 'document_title_changed')
@@ -72,17 +92,24 @@ class History(object):
     @timer.timer
     def update_size(self):
         workspace = WorkspaceRepo.get_workspace()
-        history = [DocumentRepo.get_stub_by_id(doc_id) for doc_id in workspace.get_history()]
+        history_ids = self.drag_history_override if self.drag_history_override != None else workspace.get_history()
+        history = [DocumentRepo.get_stub_by_id(doc_id) for doc_id in history_ids]
         mode = workspace.get_mode()
 
         total_width = 0
         self.items = list()
+        self.active_document_index = None
+        self.history_items_data = list()
+        self.history_widths = dict()
+        target_offsets = dict()
 
         for i, document_stub in enumerate(history):
             if document_stub['title'] not in self.size_cache:
                 self.size_cache[document_stub['title']] = self.get_item_extents(document_stub['title']).width / Pango.SCALE + 37
             document_width = self.size_cache[document_stub['title']]
-            self.items.append((i, document_stub, total_width, document_width))
+            target_offsets[document_stub['id']] = total_width
+            self.history_widths[document_stub['id']] = document_width
+            self.history_items_data.append((i, document_stub, document_width))
             total_width += document_width
             if document_stub['id'] == workspace.get_active_document_id():
                 self.active_document_index = i
@@ -92,7 +119,12 @@ class History(object):
             total_width += self.get_item_extents('New Document').width / Pango.SCALE + 37
         total_width += 72
 
+        self.total_width = total_width
         self.view.scrolling_widget.set_size(total_width, 1)
+        self.target_offsets = target_offsets
+        self.ensure_offsets_initialized()
+        self.update_items_from_offsets()
+        self.schedule_offset_animation()
 
     @timer.timer
     def scroll_active_document_on_screen(self):
@@ -122,6 +154,10 @@ class History(object):
     def on_primary_button_release(self, scrolling_widget, data):
         x_offset, y_offset, state = data
 
+        if self.dragging_document_id != None:
+            self.set_selected_index(None)
+            return
+
         hover_index = self.get_hover_index()
         if hover_index != None and hover_index == self.selected_index:
             UseCases.set_active_document(self.items[hover_index][1]['id'], update_history=False)
@@ -137,13 +173,17 @@ class History(object):
         workspace = WorkspaceRepo.get_workspace()
         mode = workspace.get_mode()
 
-        hover_index = self.get_hover_index()
+        now = time.time()
+        hover_index = self.get_dragging_index() if self.dragging_document_id != None else self.get_hover_index()
+        if self.hover_lock_until != None and now < self.hover_lock_until:
+            hover_index = self.selected_index
         scrolling_offset = int(self.view.scrolling_widget.scrolling_offset_x) + 1
         hover_color = ColorManager.get_ui_color('history_hover')
         selected_color = ColorManager.get_ui_color('history_active_bg')
         fg_color = ColorManager.get_ui_color('history_fg')
 
         draft_offset = 0
+        selected_index_for_draw = self.get_dragging_index() if self.dragging_document_id != None else self.selected_index
 
         if self.active_document_index != None or mode != 'draft':
             for i, document_stub, document_offset, document_width in self.items:
@@ -152,7 +192,7 @@ class History(object):
                     font_desc = self.font_desc_bold if (is_active and mode != 'draft') else self.font_desc_normal
 
                     if i == hover_index:
-                        if i == self.selected_index:
+                        if i == selected_index_for_draw:
                             Gdk.cairo_set_source_rgba(ctx, selected_color)
                         else:
                             Gdk.cairo_set_source_rgba(ctx, hover_color)
@@ -201,11 +241,168 @@ class History(object):
                 return i
         return None
 
+    def on_drag_begin(self, gesture, x, y):
+        hover_index = self.get_hover_index()
+        if hover_index == None:
+            gesture.set_state(Gtk.EventSequenceState.DENIED)
+            return
+
+        self.dragging_document_id = self.items[hover_index][1]['id']
+        self.drag_history_override = WorkspaceRepo.get_workspace().get_history()[:]
+        self.drag_start_x = self.view.scrolling_widget.scrolling_offset_x + x
+        self.drag_target_index = hover_index
+        self.dragging_offset_override = self.get_dragging_offset_for_position(self.drag_start_x)
+        self.set_selected_index(hover_index)
+        self.update_items_from_offsets()
+        self.view.content.queue_draw()
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+
+    def on_drag_update(self, gesture, offset_x, offset_y):
+        if self.dragging_document_id == None:
+            return
+
+        current_x = self.drag_start_x + offset_x
+        self.dragging_offset_override = self.get_dragging_offset_for_position(current_x)
+        target_index = self.get_target_index()
+
+        if target_index == None:
+            self.update_items_from_offsets()
+            self.view.content.queue_draw()
+            return
+
+        new_history = self.drag_history_override[:]
+        new_history.remove(self.dragging_document_id)
+        new_history.insert(target_index, self.dragging_document_id)
+
+        if new_history != self.drag_history_override:
+            self.drag_history_override = new_history
+            self.drag_target_index = target_index
+            self.set_selected_index(self.drag_history_override.index(self.dragging_document_id))
+            self.update()
+        else:
+            self.update_items_from_offsets()
+            self.view.content.queue_draw()
+
+    def on_drag_end(self, gesture, offset_x, offset_y):
+        if self.dragging_document_id == None:
+            return
+
+        final_index = None
+        if self.drag_history_override != None and self.dragging_document_id in self.drag_history_override:
+            final_index = self.drag_history_override.index(self.dragging_document_id)
+
+        self.drag_history_override = None
+        self.drag_start_x = None
+        self.drag_target_index = None
+        self.dragging_offset_override = None
+        dragging_document_id = self.dragging_document_id
+        self.dragging_document_id = None
+
+        if final_index != None:
+            UseCases.move_history_item(dragging_document_id, final_index)
+            self.set_selected_index(final_index)
+            self.hover_lock_until = time.time() + 0.25
+        self.update()
+
+    def get_target_index(self):
+        if len(self.items) == 0:
+            return 0
+
+        if self.dragging_document_id == None or self.dragging_offset_override == None:
+            return None
+
+        width = self.history_widths.get(self.dragging_document_id, 0)
+        center = self.dragging_offset_override + width / 2
+
+        boundary_index = 0
+        running_offset = 0
+        for i, document_stub, document_width in self.history_items_data:
+            if document_stub['id'] == self.dragging_document_id:
+                continue
+
+            boundary = running_offset + document_width / 2
+            if center < boundary:
+                return boundary_index
+
+            running_offset += document_width
+            boundary_index += 1
+
+        return boundary_index
+
+    def get_dragging_index(self):
+        if self.dragging_document_id == None:
+            return None
+        for i, document_stub, document_offset, document_width in self.items:
+            if document_stub['id'] == self.dragging_document_id:
+                return i
+        return None
+
+    def get_dragging_offset_for_position(self, current_x):
+        if self.dragging_document_id == None:
+            return 0
+
+        width = self.history_widths.get(self.dragging_document_id, 0)
+        offset = current_x - width / 2
+        offset = max(0, min(offset, max(0, self.total_width - width)))
+        return offset
+
+    def ensure_offsets_initialized(self):
+        for doc_id, target_offset in self.target_offsets.items():
+            if doc_id not in self.animated_offsets:
+                self.animated_offsets[doc_id] = target_offset
+
+        for doc_id in list(self.animated_offsets.keys()):
+            if doc_id not in self.target_offsets:
+                del(self.animated_offsets[doc_id])
+
+        if self.dragging_document_id != None and self.dragging_document_id in self.target_offsets and self.dragging_offset_override != None:
+            self.animated_offsets[self.dragging_document_id] = self.dragging_offset_override
+
+    def update_items_from_offsets(self):
+        self.items = list()
+
+        for i, document_stub, document_width in self.history_items_data:
+            offset = self.animated_offsets.get(document_stub['id'], self.target_offsets.get(document_stub['id'], 0))
+            self.items.append((i, document_stub, offset, document_width))
+
+    def schedule_offset_animation(self):
+        if self.animation_timeout_id == None:
+            self.animation_timeout_id = GObject.timeout_add(15, self.animate_offsets)
+
+    def animate_offsets(self):
+        if len(self.target_offsets.keys()) == 0:
+            self.animation_timeout_id = None
+            return False
+
+        updated = False
+        for doc_id, target_offset in self.target_offsets.items():
+            if doc_id == self.dragging_document_id and self.dragging_offset_override != None:
+                new_offset = self.dragging_offset_override
+            else:
+                current_offset = self.animated_offsets.get(doc_id, target_offset)
+                difference = target_offset - current_offset
+
+                if abs(difference) < 0.5:
+                    new_offset = target_offset
+                else:
+                    new_offset = current_offset + difference * 0.2
+
+            if abs(new_offset - target_offset) > 0.01:
+                updated = True
+            self.animated_offsets[doc_id] = new_offset
+
+        self.update_items_from_offsets()
+        self.view.content.queue_draw()
+
+        if updated:
+            return True
+        else:
+            self.animation_timeout_id = None
+            return False
+
     @timer.timer
     def get_item_extents(self, text):
         self.layout.set_font_description(self.font_desc_bold)
         self.layout.set_width(-1)
         self.layout.set_text(text)
         return self.layout.get_extents()[1]
-
-

@@ -241,6 +241,14 @@ class UseCases():
         MessageBus.add_message('mode_set')
         MessageBus.add_message('history_changed')
 
+    def move_history_item(document_id, new_position):
+        workspace = WorkspaceRepo.get_workspace()
+
+        workspace.move_history_item(document_id, new_position)
+
+        WorkspaceRepo.update(workspace)
+        MessageBus.add_message('history_changed')
+
     def pin_document(document_id):
         workspace = WorkspaceRepo.get_workspace()
 
@@ -1057,5 +1065,4 @@ class UseCases():
         document.scroll_to_xy(x, y, 'decelerate')
 
         MessageBus.add_message('document_changed')
-
 

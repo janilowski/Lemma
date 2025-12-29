@@ -57,6 +57,20 @@ class Workspace():
         if document_id in self.history:
             self.history.remove(document_id)
 
+    def move_history_item(self, document_id, new_position):
+        if document_id not in self.history:
+            return
+
+        current_index = self.history.index(document_id)
+
+        self.history.remove(document_id)
+
+        new_index = max(0, min(new_position, len(self.history)))
+        if new_index > current_index:
+            new_index = min(new_index, len(self.history))
+
+        self.history.insert(new_index, document_id)
+
     def pin_document(self, document_id):
         if document_id == None: return
         if document_id in self.pinned_document_ids: return
@@ -125,5 +139,4 @@ class Workspace():
         else:
             i = self.pinned_document_ids.index(document_id)
             return str(i + 1) + '-symbolic'
-
 
